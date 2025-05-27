@@ -1,0 +1,23 @@
+{
+  "name": "cloudapp-callum",
+  "version": "1.0.0",
+  "description": "Combined web app with login, register, and patient management features.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.3",
+    "connect-mongo": "^5.0.0",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-session": "^1.17.3",
+    "method-override": "^3.0.0",
+    "mongoose": "^8.12.1",
+    "serverless-http": "^3.2.0"
+  }
+}
