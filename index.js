@@ -9,7 +9,6 @@ const User = require("./models/Users.js");
 
 const app = express();
 
-// test
 // Connect to MongoDB
 mongoose.connect("mongodb://20.0.153.128:10999/callumDB")
     .then(() => console.log("MongoDB Connected"))
@@ -37,8 +36,8 @@ function isAuthenticated(req, res, next) {
 app.use((req, res, next) => {
     res.locals.session = req.session;
     next();
-  });
-  
+});
+
 // User routes
 app.get("/register", (req, res) => {
     res.render("register");
@@ -74,7 +73,8 @@ app.post("/login", async (req, res) => {
     res.redirect("/students");
 });
 
-app.get("/logout", (req, res) => {
+// ✅ Protected logout route
+app.get("/logout", isAuthenticated, (req, res) => {
     req.session.destroy(() => {
         res.redirect("/login");
     });
@@ -90,11 +90,12 @@ const studentSchema = new mongoose.Schema({
 });
 const Student = mongoose.model("Student", studentSchema);
 
-// Protected student routes
-app.get("/", (req, res) => {
+// ✅ Protected root redirect
+app.get("/", isAuthenticated, (req, res) => {
     res.redirect("/students");
 });
 
+// Student routes
 app.get("/students", isAuthenticated, async (req, res) => {
     try {
         const students = await Student.find();
