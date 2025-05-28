@@ -34,6 +34,11 @@ function isAuthenticated(req, res, next) {
     res.redirect("/login");
 }
 
+app.use((req, res, next) => {
+    res.locals.session = req.session;
+    next();
+  });
+  
 // User routes
 app.get("/register", (req, res) => {
     res.render("register");
