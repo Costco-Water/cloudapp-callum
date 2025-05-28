@@ -1,113 +1,63 @@
-<!-- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Student</title>
-</head>
-
-<body>
-    <h1>Edit Student</h1>
-    <form action="/student/<%= student._id %>?_method=PUT" method="POST">
-        <input type="text" name="name" value="<%= student.name %>" required>
-        <input type="number" name="age" value="<%= student.age %>" required>
-        <input type="text" name="course" value="<%= student.course %>" required>
-        <button type="submit">Update</button>
-    </form>
-    <br>
-    <a href="/students">Back to List</a>
-</body>
-</html>
-
- -->
-
- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Student</title>
-    <!-- Bootstrap CSS CDN -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body {
-            background-color: #f0f2f5; /* Facebook's light gray-blue background */
-        }
-        .card {
-            border: none;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            background-color: #ffffff; /* White card background */
-        }
-        .btn-primary {
-            background-color: #1877f2; /* Facebook blue */
-            border-color: #1877f2;
-        }
-        .btn-primary:hover {
-            background-color: #166fe5; /* Slightly darker blue on hover */
-            border-color: #166fe5;
-        }
-        .btn-secondary {
-            background-color: #e4e6eb; /* Facebook gray */
-            border-color: #e4e6eb;
-            color: #050505; /* Dark text for contrast */
-        }
-        .btn-secondary:hover {
-            background-color: #d8dade; /* Darker gray on hover */
-            border-color: #d8dade;
-        }
-        a {
-            color: #1877f2; /* Facebook blue for links */
-        }
-        a:hover {
-            color: #166fe5;
-            text-decoration: underline;
-        }
-        .form-control:focus {
-            border-color: #1877f2; /* Facebook blue on focus */
-            box-shadow: 0 0 0 0.2rem rgba(24, 119, 242, 0.25); /* Matching focus ring */
-        }
+        body { background-color: #f0f2f5; }
+        .card { border: none; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); background-color: #ffffff; }
+        .btn-primary { background-color: #1877f2; border-color: #1877f2; }
+        .btn-primary:hover { background-color: #166fe5; border-color: #166fe5; }
+        .btn-secondary { background-color: #e4e6eb; border-color: #e4e6eb; color: #050505; }
+        .btn-secondary:hover { background-color: #d8dade; border-color: #d8dade; }
+        a { color: #1877f2; }
+        a:hover { color: #166fe5; text-decoration: underline; }
+        .form-control:focus { border-color: #1877f2; box-shadow: 0 0 0 0.2rem rgba(24, 119, 242, 0.25); }
     </style>
 </head>
 <body>
     <%- include('partials/navbar') %>
 
+    <% if (session.role !== 'admin') { %>
+        <div class="container mt-5"><h3>Access Denied: Admins only</h3></div>
+        <% return; %>
+    <% } %>
+
     <div class="container mt-5">
         <h1 class="mb-4">Edit Student</h1>
-        
         <div class="card">
             <div class="card-body">
                 <form action="/student/<%= student._id %>?_method=PUT" method="POST">
                     <div class="mb-3">
                         <label for="name" class="form-label">Name</label>
-                        <input type="text" class="form-control" id="name" name="name" value="<%= student.name %>" placeholder="Enter name" required>
+                        <input type="text" class="form-control" id="name" name="name" value="<%= student.name %>" required>
                     </div>
                     <div class="mb-3">
                         <label for="age" class="form-label">Age</label>
-                        <input type="number" class="form-control" id="age" name="age" value="<%= student.age %>" placeholder="Enter age" required>
+                        <input type="number" class="form-control" id="age" name="age" value="<%= student.age %>" required>
                     </div>
                     <div class="mb-3">
                         <label for="course" class="form-label">Course</label>
-                        <input type="text" class="form-control" id="course" name="course" value="<%= student.course %>" placeholder="Enter course" required>
+                        <input type="text" class="form-control" id="course" name="course" value="<%= student.course %>" required>
                     </div>
                     <div class="mb-3">
                         <label for="email" class="form-label">Email</label>
-                        <input type="text" class="form-control" id="email" name="email" value="<%= student.email %>" placeholder="Enter email" required>
+                        <input type="text" class="form-control" id="email" name="email" value="<%= student.email %>" required>
                     </div>
                     <div class="mb-3">
                         <label for="phone" class="form-label">Phone</label>
-                        <input type="text" class="form-control" id="phone" name="phone" value="<%= student.phone %>" placeholder="Enter phone" required>
+                        <input type="text" class="form-control" id="phone" name="phone" value="<%= student.phone %>" required>
                     </div>
                     <button type="submit" class="btn btn-primary">Update</button>
                 </form>
             </div>
         </div>
-
         <div class="mt-3">
             <a href="/students" class="btn btn-secondary">Back to List</a>
         </div>
     </div>
-
-    <!-- Bootstrap JS Bundle (optional) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

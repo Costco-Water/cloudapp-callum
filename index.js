@@ -27,16 +27,41 @@ app.use(session({
     store: MongoStore.create({ mongoUrl: "mongodb://20.0.153.128:10999/callumDB" })
 }));
 
+// Middleware to make session data available in EJS
+app.use(async (req, res, next) => {
+    if (req.session.userId) {
+        try {
+            const user = await User.findById(req.session.userId);
+            res.locals.session = {
+                userId: user._id,
+                role: user.role,
+                username: user.username
+            };
+        } catch (err) {
+            res.locals.session = null;
+        }
+    } else {
+        res.locals.session = null;
+    }
+    next();
+});
+
 // Authentication middleware
 function isAuthenticated(req, res, next) {
     if (req.session.userId) return next();
     res.redirect("/login");
 }
 
-app.use((req, res, next) => {
-    res.locals.session = req.session;
-    next();
-});
+function isAdmin(req, res, next) {
+    if (req.session.userId) {
+        User.findById(req.session.userId).then(user => {
+            if (user && user.role === 'admin') return next();
+            else return res.status(403).send("Forbidden: Admins only");
+        }).catch(err => res.status(500).send("Error checking admin role"));
+    } else {
+        res.redirect("/login");
+    }
+}
 
 // User routes
 app.get("/register", (req, res) => {
@@ -48,7 +73,7 @@ app.post("/register", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     try {
-        const newUser = new User({ username, password: hashedPassword });
+        const newUser = new User({ username, password: hashedPassword, role: "user" }); // Default to 'user'
         await newUser.save();
         res.redirect("/login");
     } catch (err) {
@@ -73,7 +98,6 @@ app.post("/login", async (req, res) => {
     res.redirect("/students");
 });
 
-// ✅ Protected logout route
 app.get("/logout", isAuthenticated, (req, res) => {
     req.session.destroy(() => {
         res.redirect("/login");
@@ -90,12 +114,11 @@ const studentSchema = new mongoose.Schema({
 });
 const Student = mongoose.model("Student", studentSchema);
 
-// ✅ Protected root redirect
+// Routes
 app.get("/", isAuthenticated, (req, res) => {
     res.redirect("/students");
 });
 
-// Student routes
 app.get("/students", isAuthenticated, async (req, res) => {
     try {
         const students = await Student.find();
@@ -105,11 +128,11 @@ app.get("/students", isAuthenticated, async (req, res) => {
     }
 });
 
-app.get("/student/new", isAuthenticated, (req, res) => {
+app.get("/student/new", isAuthenticated, isAdmin, (req, res) => {
     res.render("new_student");
 });
 
-app.post("/student", isAuthenticated, async (req, res) => {
+app.post("/student", isAuthenticated, isAdmin, async (req, res) => {
     try {
         const newStudent = new Student({
             name: req.body.name,
@@ -135,7 +158,7 @@ app.get("/student/:id", isAuthenticated, async (req, res) => {
     }
 });
 
-app.get("/student/:id/edit", isAuthenticated, async (req, res) => {
+app.get("/student/:id/edit", isAuthenticated, isAdmin, async (req, res) => {
     try {
         const student = await Student.findById(req.params.id);
         if (!student) return res.status(404).send("Student Not Found");
@@ -145,7 +168,7 @@ app.get("/student/:id/edit", isAuthenticated, async (req, res) => {
     }
 });
 
-app.put("/student/:id", isAuthenticated, async (req, res) => {
+app.put("/student/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
         const student = await Student.findByIdAndUpdate(
             req.params.id,
@@ -165,7 +188,7 @@ app.put("/student/:id", isAuthenticated, async (req, res) => {
     }
 });
 
-app.delete("/student/:id", isAuthenticated, async (req, res) => {
+app.delete("/student/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
         const student = await Student.findByIdAndDelete(req.params.id);
         if (!student) return res.status(404).send("Student Not Found");
