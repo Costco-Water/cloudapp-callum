@@ -9,6 +9,7 @@ const User = require("./models/Users.js");
 
 const app = express();
 
+// test
 // Connect to MongoDB
 mongoose.connect("mongodb://20.0.153.128:10999/callumDB")
     .then(() => console.log("MongoDB Connected"))
