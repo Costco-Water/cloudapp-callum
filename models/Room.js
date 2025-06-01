@@ -4,7 +4,8 @@ const roomSchema = new mongoose.Schema({
     roomNumber: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        enum: ['1', '2', '3', '4']
     },
     type: {
         type: String,
@@ -13,16 +14,16 @@ const roomSchema = new mongoose.Schema({
     },
     capacity: {
         type: Number,
-        default: 1
+        default: 4
     },
+    currentPatients: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Patient'
+    }],
     isOccupied: {
         type: Boolean,
         default: false
     },
-    currentPatients: [{  // Change this to an array
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Patient'
-    }],
     notes: String
 });
 

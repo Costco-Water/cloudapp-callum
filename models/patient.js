@@ -5,9 +5,13 @@ const patientSchema = new mongoose.Schema({
     lastName: String,
     dateOfBirth: Date,
     medicalCondition: String,
-    roomNumber: { type: String, default: "Unassigned" },
-    admissionDate: { type: Date, default: Date.now },
-    notes: String
+    roomNumber: String,
+    notes: String,
+    discharged: {
+        type: Boolean,
+        default: false
+    },
+    dischargeDate: Date
 });
 
 module.exports = mongoose.model("Patient", patientSchema);

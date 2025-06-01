@@ -6,10 +6,10 @@ const session = require("express-session");
 const bcrypt = require("bcryptjs");
 const MongoStore = require("connect-mongo");
 const User = require("./models/Users.js");
-const Patient = require("./models/patient.js"); // Add this line
+const Patient = require("./models/patient.js");
 const Room = require("./models/Room.js");
 const app = express();
-//working as of 17:42 01/06/25
+
 // Connect to MongoDB
 mongoose.connect("mongodb://20.0.153.128:10999/callumDB")
     .then(() => console.log("MongoDB Connected"))
@@ -74,7 +74,7 @@ app.post("/register", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     try {
-        const newUser = new User({ username, password: hashedPassword, role: "user" }); // Default to 'user'
+        const newUser = new User({ username, password: hashedPassword, role: "user" });
         await newUser.save();
         res.redirect("/login");
     } catch (err) {
@@ -105,9 +105,7 @@ app.get("/logout", isAuthenticated, (req, res) => {
     });
 });
 
-
-
-// Routes
+// Patient routes
 app.get("/", isAuthenticated, (req, res) => {
     res.redirect("/patients");
 });
@@ -183,6 +181,29 @@ app.put("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
     }
 });
 
+app.post("/patient/:id/discharge", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const patient = await Patient.findById(req.params.id);
+        if (!patient) return res.status(404).send("Patient Not Found");
+
+        const room = await Room.findOne({ roomNumber: patient.roomNumber });
+        if (room) {
+            room.currentPatients = room.currentPatients.filter(p => p.toString() !== patient._id.toString());
+            room.isOccupied = room.currentPatients.length > 0;
+            await room.save();
+        }
+
+        patient.discharged = true;
+        patient.dischargeDate = new Date();
+        patient.roomNumber = null;
+        await patient.save();
+
+        res.redirect("/patients");
+    } catch (error) {
+        res.status(500).send("Error discharging patient");
+    }
+});
+
 app.delete("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
         const patient = await Patient.findByIdAndDelete(req.params.id);
@@ -193,12 +214,11 @@ app.delete("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
     }
 });
 
+// Room routes
 app.get("/rooms", isAuthenticated, async (req, res) => {
     try {
-        console.log("Fetching rooms...");
-        const rooms = await Room.find().populate('currentPatients'); // Changed from currentPatient to currentPatients
+        const rooms = await Room.find().populate('currentPatients');
         const patients = await Patient.find();
-        console.log(`Found ${rooms.length} rooms and ${patients.length} patients`);
         res.render("rooms", { rooms, patients });
     } catch (error) {
         console.error("Room fetch error:", error);
@@ -221,7 +241,38 @@ app.post("/room", isAuthenticated, isAdmin, async (req, res) => {
         await newRoom.save();
         res.redirect("/rooms");
     } catch (error) {
+        console.error("Room creation error:", error);
         res.status(500).send("Error adding room");
+    }
+});
+
+app.get("/room/:id/edit", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const room = await Room.findById(req.params.id).populate('currentPatients');
+        if (!room) return res.status(404).send("Room Not Found");
+        res.render("edit_room", { room });
+    } catch (error) {
+        console.error("Room edit fetch error:", error);
+        res.status(500).send("Error fetching room");
+    }
+});
+
+app.put("/room/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const room = await Room.findByIdAndUpdate(
+            req.params.id,
+            {
+                type: req.body.type,
+                capacity: req.body.capacity,
+                notes: req.body.notes
+            },
+            { new: true }
+        );
+        if (!room) return res.status(404).send("Room Not Found");
+        res.redirect("/rooms");
+    } catch (error) {
+        console.error("Room update error:", error);
+        res.status(500).send("Error updating room");
     }
 });
 
@@ -234,6 +285,19 @@ app.post("/room/:id/assign", isAuthenticated, isAdmin, async (req, res) => {
             return res.status(404).send("Room or Patient not found");
         }
 
+        // Remove patient from their current room if they're assigned to one
+        if (patient.roomNumber) {
+            const oldRoom = await Room.findOne({ roomNumber: patient.roomNumber });
+            if (oldRoom) {
+                oldRoom.currentPatients = oldRoom.currentPatients.filter(
+                    p => p.toString() !== patient._id.toString()
+                );
+                oldRoom.isOccupied = oldRoom.currentPatients.length > 0;
+                await oldRoom.save();
+            }
+        }
+
+        // Add patient to new room
         if (!room.currentPatients) {
             room.currentPatients = [];
         }
@@ -251,58 +315,26 @@ app.post("/room/:id/assign", isAuthenticated, isAdmin, async (req, res) => {
 
         res.redirect("/rooms");
     } catch (error) {
-        console.error("Assignment error:", error); // Add error logging
+        console.error("Assignment error:", error);
         res.status(500).send("Error assigning room");
     }
 });
 
-app.get("/room/:id/edit", isAuthenticated, isAdmin, async (req, res) => {
-    try {
-        const room = await Room.findById(req.params.id).populate('currentPatient');
-        if (!room) return res.status(404).send("Room Not Found");
-        res.render("edit_room", { room });
-    } catch (error) {
-        res.status(500).send("Error fetching room");
-    }
-});
-
-// Update room
-app.put("/room/:id", isAuthenticated, isAdmin, async (req, res) => {
-    try {
-        const room = await Room.findByIdAndUpdate(
-            req.params.id,
-            {
-                roomNumber: req.body.roomNumber,
-                type: req.body.type,
-                capacity: req.body.capacity,
-                notes: req.body.notes
-            },
-            { new: true }
-        );
-        if (!room) return res.status(404).send("Room Not Found");
-        res.redirect("/rooms");
-    } catch (error) {
-        res.status(500).send("Error updating room");
-    }
-});
-
-// Delete room
 app.delete("/room/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
         const room = await Room.findById(req.params.id);
         if (!room) return res.status(404).send("Room Not Found");
         
         // Update any patients assigned to this room
-        if (room.currentPatient) {
-            await Patient.updateMany(
-                { roomNumber: room.roomNumber },
-                { $set: { roomNumber: 'Unassigned' } }
-            );
-        }
+        await Patient.updateMany(
+            { roomNumber: room.roomNumber },
+            { $set: { roomNumber: null } }
+        );
         
         await Room.findByIdAndDelete(req.params.id);
         res.redirect("/rooms");
     } catch (error) {
+        console.error("Room deletion error:", error);
         res.status(500).send("Error deleting room");
     }
 });
