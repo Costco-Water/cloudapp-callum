@@ -18,6 +18,11 @@
         }
         .status-active { background-color: #d4edda; color: #155724; }
         .status-discharged { background-color: #f8d7da; color: #721c24; }
+        .reassign-form {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #dee2e6;
+        }
     </style>
 </head>
 <body>
@@ -69,6 +74,25 @@
                                     </form>
                                 <% } %>
                             </div>
+
+                            <% if (patient.discharged && session.role === 'admin') { %>
+                                <div class="reassign-form">
+                                    <form action="/patient/<%= patient._id %>/reassign" method="POST">
+                                        <div class="input-group">
+                                            <select class="form-select" name="roomNumber" required>
+                                                <option value="">Reassign to Room...</option>
+                                                <option value="1">Room 1 (General)</option>
+                                                <option value="2">Room 2 (Emergency)</option>
+                                                <option value="3">Room 3 (Isolation)</option>
+                                                <option value="4">Room 4 (Recovery)</option>
+                                            </select>
+                                            <button type="submit" class="btn btn-success">
+                                                Reassign
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            <% } %>
                         </div>
                     </div>
                 </div>

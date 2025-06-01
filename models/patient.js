@@ -5,7 +5,11 @@ const patientSchema = new mongoose.Schema({
     lastName: String,
     dateOfBirth: Date,
     medicalCondition: String,
-    roomNumber: String,
+    roomNumber: {
+        type: String,
+        enum: ['1', '2', '3', '4', 'Discharge', null],
+        default: null
+    },
     notes: String,
     discharged: {
         type: Boolean,

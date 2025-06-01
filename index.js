@@ -134,8 +134,20 @@ app.post("/patient", isAuthenticated, isAdmin, async (req, res) => {
             notes: req.body.notes
         });
         await newPatient.save();
+
+        // If room is assigned, update the room's currentPatients
+        if (req.body.roomNumber && req.body.roomNumber !== 'Discharge') {
+            const room = await Room.findOne({ roomNumber: req.body.roomNumber });
+            if (room) {
+                room.currentPatients.push(newPatient._id);
+                room.isOccupied = true;
+                await room.save();
+            }
+        }
+
         res.redirect("/patients");
     } catch (error) {
+        console.error("Patient creation error:", error);
         res.status(500).send("Error adding Patient");
     }
 });
@@ -186,20 +198,25 @@ app.post("/patient/:id/discharge", isAuthenticated, isAdmin, async (req, res) =>
         const patient = await Patient.findById(req.params.id);
         if (!patient) return res.status(404).send("Patient Not Found");
 
-        const room = await Room.findOne({ roomNumber: patient.roomNumber });
-        if (room) {
-            room.currentPatients = room.currentPatients.filter(p => p.toString() !== patient._id.toString());
-            room.isOccupied = room.currentPatients.length > 0;
-            await room.save();
+        // Remove from current room if assigned
+        if (patient.roomNumber && patient.roomNumber !== 'Discharge') {
+            const room = await Room.findOne({ roomNumber: patient.roomNumber });
+            if (room) {
+                room.currentPatients = room.currentPatients.filter(p => p.toString() !== patient._id.toString());
+                room.isOccupied = room.currentPatients.length > 0;
+                await room.save();
+            }
         }
 
+        // Update patient
         patient.discharged = true;
         patient.dischargeDate = new Date();
-        patient.roomNumber = null;
+        patient.roomNumber = 'Discharge';
         await patient.save();
 
         res.redirect("/patients");
     } catch (error) {
+        console.error("Discharge error:", error);
         res.status(500).send("Error discharging patient");
     }
 });
@@ -336,6 +353,39 @@ app.delete("/room/:id", isAuthenticated, isAdmin, async (req, res) => {
     } catch (error) {
         console.error("Room deletion error:", error);
         res.status(500).send("Error deleting room");
+    }
+});
+
+app.post("/patient/:id/reassign", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const patient = await Patient.findById(req.params.id);
+        const newRoom = await Room.findOne({ roomNumber: req.body.roomNumber });
+        
+        if (!patient || !newRoom) {
+            return res.status(404).send("Patient or Room not found");
+        }
+
+        // Remove from discharge if applicable
+        if (patient.roomNumber === 'Discharge') {
+            patient.discharged = false;
+            patient.dischargeDate = null;
+        }
+
+        // Update patient's room
+        patient.roomNumber = newRoom.roomNumber;
+        await patient.save();
+
+        // Add to new room
+        if (!newRoom.currentPatients.includes(patient._id)) {
+            newRoom.currentPatients.push(patient._id);
+            newRoom.isOccupied = true;
+            await newRoom.save();
+        }
+
+        res.redirect("/patients");
+    } catch (error) {
+        console.error("Reassignment error:", error);
+        res.status(500).send("Error reassigning patient");
     }
 });
 
