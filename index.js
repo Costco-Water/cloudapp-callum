@@ -6,7 +6,7 @@ const session = require("express-session");
 const bcrypt = require("bcryptjs");
 const MongoStore = require("connect-mongo");
 const User = require("./models/Users.js");
-
+const Patient = require("./models/patient.js"); // Add this line
 const app = express();
 
 // Connect to MongoDB
@@ -95,7 +95,7 @@ app.post("/login", async (req, res) => {
     if (!match) return res.send("Incorrect password");
 
     req.session.userId = user._id;
-    res.redirect("/students");
+    res.redirect("/patients");
 });
 
 app.get("/logout", isAuthenticated, (req, res) => {
@@ -104,97 +104,91 @@ app.get("/logout", isAuthenticated, (req, res) => {
     });
 });
 
-// Student model
-const studentSchema = new mongoose.Schema({
-    name: String,
-    age: Number,
-    course: String,
-    email: String,
-    phone: Number
-});
-const Student = mongoose.model("Student", studentSchema);
+
 
 // Routes
 app.get("/", isAuthenticated, (req, res) => {
-    res.redirect("/students");
+    res.redirect("/patients");
 });
 
-app.get("/students", isAuthenticated, async (req, res) => {
+app.get("/patients", isAuthenticated, async (req, res) => {
     try {
-        const students = await Student.find();
-        res.render("students", { students });
+        const patients = await Patient.find();
+        res.render("patients", { patients });
     } catch (error) {
-        res.status(500).send("Error fetching students");
+        res.status(500).send("Error fetching patients");
     }
 });
 
-app.get("/student/new", isAuthenticated, isAdmin, (req, res) => {
-    res.render("new_student");
+app.get("/patient/new", isAuthenticated, isAdmin, (req, res) => {
+    res.render("new_patient");
 });
 
-app.post("/student", isAuthenticated, isAdmin, async (req, res) => {
+app.post("/patient", isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const newStudent = new Student({
-            name: req.body.name,
-            age: req.body.age,
-            course: req.body.course,
-            email: req.body.email,
-            phone: req.body.phone
+        const newPatient = new Patient({
+            firstName: req.body.firstName,
+            lastName: req.body.lastName,
+            dateOfBirth: req.body.dateOfBirth,
+            medicalCondition: req.body.medicalCondition,
+            roomNumber: req.body.roomNumber,
+            notes: req.body.notes
         });
-        await newStudent.save();
-        res.redirect("/students");
+        await newPatient.save();
+        res.redirect("/patients");
     } catch (error) {
-        res.status(500).send("Error adding student");
+        res.status(500).send("Error adding Patient");
     }
 });
 
-app.get("/student/:id", isAuthenticated, async (req, res) => {
+app.get("/patient/:id", isAuthenticated, async (req, res) => {
     try {
-        const student = await Student.findById(req.params.id);
-        if (!student) return res.status(404).send("Student Not Found");
-        res.render("student", { student });
+        const patient = await Patient.findById(req.params.id);
+        if (!patient) return res.status(404).send("Patient Not Found");
+        res.render("patient", { patient });
     } catch (error) {
-        res.status(500).send("Error fetching student");
+        res.status(500).send("Error fetching patient");
     }
 });
 
-app.get("/student/:id/edit", isAuthenticated, isAdmin, async (req, res) => {
+app.get("/patient/:id/edit", isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const student = await Student.findById(req.params.id);
-        if (!student) return res.status(404).send("Student Not Found");
-        res.render("edit_student", { student });
+        const patient = await Patient.findById(req.params.id);
+        if (!patient) return res.status(404).send("Patient Not Found");
+        res.render("edit_patient", { patient });
     } catch (error) {
-        res.status(500).send("Error fetching student");
+        res.status(500).send("Error fetching patient");
     }
 });
 
-app.put("/student/:id", isAuthenticated, isAdmin, async (req, res) => {
+app.put("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const student = await Student.findByIdAndUpdate(
+        const patient = await Patient.findByIdAndUpdate(
             req.params.id,
             {
-                name: req.body.name,
-                age: req.body.age,
-                course: req.body.course,
-                email: req.body.email,
-                phone: req.body.phone
+                firstName: req.body.firstName,
+                lastName: req.body.lastName,
+                dateOfBirth: req.body.dateOfBirth,
+                medicalCondition: req.body.medicalCondition,
+                roomNumber: req.body.roomNumber,
+                notes: req.body.notes
             },
             { new: true }
         );
-        if (!student) return res.status(404).send("Student Not Found");
-        res.redirect("/students");
+        if (!patient) return res.status(404).send("Patient Not Found");
+        res.redirect("/patients");
     } catch (error) {
-        res.status(500).send("Error updating student");
+        res.status(500).send("Error updating patient");
     }
 });
 
-app.delete("/student/:id", isAuthenticated, isAdmin, async (req, res) => {
+app.delete("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
-        const student = await Student.findByIdAndDelete(req.params.id);
-        if (!student) return res.status(404).send("Student Not Found");
-        res.redirect("/students");
+        const patient = await Patient.findByIdAndDelete(req.params.id);
+        if (!patient) return res.status(404).send("Patient Not Found");
+        res.redirect("/patients");
     } catch (error) {
-        res.status(500).send("Error deleting student");
+        res.status(500).send("Error deleting patient");
     }
 });
 
