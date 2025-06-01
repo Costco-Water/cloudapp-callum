@@ -196,9 +196,11 @@ app.delete("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
 app.get("/rooms", isAuthenticated, async (req, res) => {
     try {
         const rooms = await Room.find().populate('currentPatient');
-        const patients = await Patient.find(); // Add this line
-        res.render("rooms", { rooms, patients }); // Update this line
+        const patients = await Patient.find(); // Make sure this line exists
+        console.log('Number of patients:', patients.length); // Add this debug line
+        res.render("rooms", { rooms, patients }); // Make sure both are passed
     } catch (error) {
+        console.error('Error:', error); // Add error logging
         res.status(500).send("Error fetching rooms");
     }
 });
@@ -241,6 +243,57 @@ app.post("/room/:id/assign", isAuthenticated, isAdmin, async (req, res) => {
         res.redirect("/rooms");
     } catch (error) {
         res.status(500).send("Error assigning room");
+    }
+});
+
+app.get("/room/:id/edit", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const room = await Room.findById(req.params.id).populate('currentPatient');
+        if (!room) return res.status(404).send("Room Not Found");
+        res.render("edit_room", { room });
+    } catch (error) {
+        res.status(500).send("Error fetching room");
+    }
+});
+
+// Update room
+app.put("/room/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const room = await Room.findByIdAndUpdate(
+            req.params.id,
+            {
+                roomNumber: req.body.roomNumber,
+                type: req.body.type,
+                capacity: req.body.capacity,
+                notes: req.body.notes
+            },
+            { new: true }
+        );
+        if (!room) return res.status(404).send("Room Not Found");
+        res.redirect("/rooms");
+    } catch (error) {
+        res.status(500).send("Error updating room");
+    }
+});
+
+// Delete room
+app.delete("/room/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const room = await Room.findById(req.params.id);
+        if (!room) return res.status(404).send("Room Not Found");
+        
+        // Update any patients assigned to this room
+        if (room.currentPatient) {
+            await Patient.updateMany(
+                { roomNumber: room.roomNumber },
+                { $set: { roomNumber: 'Unassigned' } }
+            );
+        }
+        
+        await Room.findByIdAndDelete(req.params.id);
+        res.redirect("/rooms");
+    } catch (error) {
+        res.status(500).send("Error deleting room");
     }
 });
 
