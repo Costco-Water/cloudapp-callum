@@ -200,12 +200,23 @@ app.post("/patient/:id/discharge", isAuthenticated, isAdmin, async (req, res) =>
 
         // Remove from current room if assigned
         if (patient.roomNumber && patient.roomNumber !== 'Discharge') {
-            const room = await Room.findOne({ roomNumber: patient.roomNumber });
-            if (room) {
-                room.currentPatients = room.currentPatients.filter(p => p.toString() !== patient._id.toString());
-                room.isOccupied = room.currentPatients.length > 0;
-                await room.save();
+            const currentRoom = await Room.findOne({ roomNumber: patient.roomNumber });
+            if (currentRoom) {
+                currentRoom.currentPatients = currentRoom.currentPatients.filter(p => p.toString() !== patient._id.toString());
+                currentRoom.isOccupied = currentRoom.currentPatients.length > 0;
+                await currentRoom.save();
             }
+        }
+
+        // Add to discharge room
+        const dischargeRoom = await Room.findOne({ roomNumber: 'Discharge' });
+        if (dischargeRoom) {
+            if (!dischargeRoom.currentPatients) {
+                dischargeRoom.currentPatients = [];
+            }
+            dischargeRoom.currentPatients.push(patient._id);
+            dischargeRoom.isOccupied = true;
+            await dischargeRoom.save();
         }
 
         // Update patient

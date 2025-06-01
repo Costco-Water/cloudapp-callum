@@ -4,13 +4,12 @@ const roomSchema = new mongoose.Schema({
     roomNumber: {
         type: String,
         required: true,
-        unique: true,
-        enum: ['1', '2', '3', '4', 'Discharge']
+        unique: true
     },
     type: {
         type: String,
         enum: ['General', 'Emergency', 'Isolation', 'Recovery', 'Discharge'],
-        default: 'General'
+        required: true
     },
     capacity: {
         type: Number,
@@ -27,28 +26,32 @@ const roomSchema = new mongoose.Schema({
     notes: String
 });
 
-// Add a static method to ensure fixed room types
 roomSchema.statics.setupDefaultRooms = async function() {
-    const rooms = [
-        { roomNumber: '1', type: 'General', capacity: 100 },
-        { roomNumber: '2', type: 'Emergency', capacity: 100 },
-        { roomNumber: '3', type: 'Isolation', capacity: 100 },
-        { roomNumber: '4', type: 'Recovery', capacity: 100 },
-        { roomNumber: 'Discharge', type: 'Discharge', capacity: 1000 }
-    ];
+    try {
+        const rooms = [
+            { roomNumber: '1', type: 'General', capacity: 100 },
+            { roomNumber: '2', type: 'Emergency', capacity: 100 },
+            { roomNumber: '3', type: 'Isolation', capacity: 100 },
+            { roomNumber: '4', type: 'Recovery', capacity: 100 },
+            { roomNumber: 'Discharge', type: 'Discharge', capacity: 1000 }
+        ];
 
-    for (const room of rooms) {
-        await this.findOneAndUpdate(
-            { roomNumber: room.roomNumber },
-            { $setOnInsert: room },
-            { upsert: true, new: true }
-        );
+        for (const room of rooms) {
+            await this.findOneAndUpdate(
+                { roomNumber: room.roomNumber },
+                room,
+                { upsert: true, new: true }
+            );
+        }
+        console.log('Default rooms setup completed');
+    } catch (error) {
+        console.error('Error setting up default rooms:', error);
     }
 };
 
 const Room = mongoose.model("Room", roomSchema);
 
-// Setup default rooms when the application starts
+// Setup default rooms with error handling
 Room.setupDefaultRooms().catch(console.error);
 
 module.exports = Room;
