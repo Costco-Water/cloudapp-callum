@@ -196,7 +196,8 @@ app.delete("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
 app.get("/rooms", isAuthenticated, async (req, res) => {
     try {
         const rooms = await Room.find().populate('currentPatient');
-        res.render("rooms", { rooms });
+        const patients = await Patient.find(); // Add this line
+        res.render("rooms", { rooms, patients }); // Update this line
     } catch (error) {
         res.status(500).send("Error fetching rooms");
     }
