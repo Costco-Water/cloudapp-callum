@@ -19,11 +19,10 @@ const roomSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    currentPatient: {
+    currentPatients: [{  // Change this to an array
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Patient',
-        default: null
-    },
+        ref: 'Patient'
+    }],
     notes: String
 });
 

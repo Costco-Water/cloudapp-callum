@@ -195,12 +195,8 @@ app.delete("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
 
 app.get("/rooms", isAuthenticated, async (req, res) => {
     try {
-        // Add error logging
         console.log("Fetching rooms...");
-        const rooms = await Room.find().populate({
-            path: 'currentPatient',
-            model: 'Patient'
-        });
+        const rooms = await Room.find().populate('currentPatients'); // Changed from currentPatient to currentPatients
         const patients = await Patient.find();
         console.log(`Found ${rooms.length} rooms and ${patients.length} patients`);
         res.render("rooms", { rooms, patients });
@@ -238,22 +234,24 @@ app.post("/room/:id/assign", isAuthenticated, isAdmin, async (req, res) => {
             return res.status(404).send("Room or Patient not found");
         }
 
-        // Check if room has space
+        if (!room.currentPatients) {
+            room.currentPatients = [];
+        }
+
         if (room.currentPatients.length >= room.capacity) {
             return res.status(400).send("Room is at full capacity");
         }
 
-        // Add patient to room
         room.currentPatients.push(patient._id);
         room.isOccupied = true;
         await room.save();
 
-        // Update patient's room assignment
         patient.roomNumber = room.roomNumber;
         await patient.save();
 
         res.redirect("/rooms");
     } catch (error) {
+        console.error("Assignment error:", error); // Add error logging
         res.status(500).send("Error assigning room");
     }
 });
