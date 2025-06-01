@@ -21,9 +21,9 @@
                     <div class="mb-3">
                         <label for="type" class="form-label">Room Type</label>
                         <select class="form-control" id="type" name="type" required>
-                            <option value="Standard" <%= room.type === 'Standard' ? 'selected' : '' %>>Standard</option>
+                            <option value="General" <%= room.type === 'General' ? 'selected' : '' %>>General</option>
+                            <option value="Emergency" <%= room.type === 'Emergency' ? 'selected' : '' %>>Emergency</option>
                             <option value="Isolation" <%= room.type === 'Isolation' ? 'selected' : '' %>>Isolation</option>
-                            <option value="ICU" <%= room.type === 'ICU' ? 'selected' : '' %>>ICU</option>
                             <option value="Recovery" <%= room.type === 'Recovery' ? 'selected' : '' %>>Recovery</option>
                         </select>
                     </div>

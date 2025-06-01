@@ -32,15 +32,18 @@
                             <p class="card-text">
                                 Type: <%= room.type %><br>
                                 Capacity: <%= room.capacity %><br>
-                                Occupied: <%= room.currentPatient ? '1' : '0' %>/<%= room.capacity %><br>
-                                Status: <%= room.isOccupied ? 'Occupied' : 'Available' %><br>
-                                <% if (room.currentPatient) { %>
-                                    Patient: <%= room.currentPatient.firstName %> <%= room.currentPatient.lastName %>
+                                Occupied: <%= room.currentPatients ? room.currentPatients.length : 0 %>/<%= room.capacity %><br>
+                                Status: <%= room.currentPatients && room.currentPatients.length >= room.capacity ? 'Full' : (room.currentPatients && room.currentPatients.length > 0 ? 'Partially Occupied' : 'Available') %><br>
+                                <% if (room.currentPatients && room.currentPatients.length > 0) { %>
+                                    <strong>Patients:</strong><br>
+                                    <% room.currentPatients.forEach(patient => { %>
+                                        - <%= patient.firstName %> <%= patient.lastName %><br>
+                                    <% }); %>
                                 <% } %>
                             </p>
                             <% if (session.role === 'admin') { %>
                                 <div class="btn-group">
-                                    <% if (!room.isOccupied || (room.currentPatient && room.capacity > 1)) { %>
+                                    <% if (!room.currentPatients || room.currentPatients.length < room.capacity) { %>
                                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#assignRoom<%= room._id %>">
                                             Assign Patient
                                         </button>

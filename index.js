@@ -195,12 +195,17 @@ app.delete("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
 
 app.get("/rooms", isAuthenticated, async (req, res) => {
     try {
-        const rooms = await Room.find().populate('currentPatient');
-        const patients = await Patient.find(); // Make sure this line exists
-        console.log('Number of patients:', patients.length); // Add this debug line
-        res.render("rooms", { rooms, patients }); // Make sure both are passed
+        // Add error logging
+        console.log("Fetching rooms...");
+        const rooms = await Room.find().populate({
+            path: 'currentPatient',
+            model: 'Patient'
+        });
+        const patients = await Patient.find();
+        console.log(`Found ${rooms.length} rooms and ${patients.length} patients`);
+        res.render("rooms", { rooms, patients });
     } catch (error) {
-        console.error('Error:', error); // Add error logging
+        console.error("Room fetch error:", error);
         res.status(500).send("Error fetching rooms");
     }
 });
@@ -233,10 +238,17 @@ app.post("/room/:id/assign", isAuthenticated, isAdmin, async (req, res) => {
             return res.status(404).send("Room or Patient not found");
         }
 
+        // Check if room has space
+        if (room.currentPatients.length >= room.capacity) {
+            return res.status(400).send("Room is at full capacity");
+        }
+
+        // Add patient to room
+        room.currentPatients.push(patient._id);
         room.isOccupied = true;
-        room.currentPatient = patient._id;
         await room.save();
 
+        // Update patient's room assignment
         patient.roomNumber = room.roomNumber;
         await patient.save();
 

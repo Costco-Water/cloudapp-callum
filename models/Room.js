@@ -8,8 +8,8 @@ const roomSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['Standard', 'Isolation', 'ICU', 'Recovery'],
-        default: 'Standard'
+        enum: ['General', 'Emergency', 'Isolation', 'Recovery'],
+        default: 'General'
     },
     capacity: {
         type: Number,
