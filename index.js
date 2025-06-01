@@ -371,18 +371,23 @@ app.post("/patient/:id/reassign", isAuthenticated, isAdmin, async (req, res) => 
     try {
         const patient = await Patient.findById(req.params.id);
         const newRoom = await Room.findOne({ roomNumber: req.body.roomNumber });
+        const dischargeRoom = await Room.findOne({ roomNumber: 'Discharge' });
         
         if (!patient || !newRoom) {
             return res.status(404).send("Patient or Room not found");
         }
 
-        // Remove from discharge if applicable
-        if (patient.roomNumber === 'Discharge') {
-            patient.discharged = false;
-            patient.dischargeDate = null;
+        // Remove from discharge room if they're there
+        if (dischargeRoom) {
+            dischargeRoom.currentPatients = dischargeRoom.currentPatients.filter(
+                p => p.toString() !== patient._id.toString()
+            );
+            await dischargeRoom.save();
         }
 
-        // Update patient's room
+        // Update patient status
+        patient.discharged = false;
+        patient.dischargeDate = null;
         patient.roomNumber = newRoom.roomNumber;
         await patient.save();
 
