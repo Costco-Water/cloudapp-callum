@@ -26,7 +26,7 @@
                 <% patients.forEach(patient => { %>
                     <li class="list-group-item">
                         <a href="/patient/<%= patient._id %>" class="text-decoration-none">
-                            <%= patient.name %> - <%= patient.course %>
+                            <%= patient.firstName %> <%= patient.lastName %> - Room: <%= patient.roomNumber %>
                         </a>
                     </li>
                 <% }) %>

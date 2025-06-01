@@ -31,24 +31,28 @@
             <div class="card-body">
                 <form action="/patient/<%= patient._id %>?_method=PUT" method="POST">
                     <div class="mb-3">
-                        <label for="name" class="form-label">Name</label>
-                        <input type="text" class="form-control" id="name" name="name" value="<%= patient.name %>" required>
+                        <label for="firstName" class="form-label">First Name</label>
+                        <input type="text" class="form-control" id="firstName" name="firstName" value="<%= patient.firstName %>" required>
                     </div>
                     <div class="mb-3">
-                        <label for="age" class="form-label">Age</label>
-                        <input type="number" class="form-control" id="age" name="age" value="<%= patient.age %>" required>
+                        <label for="lastName" class="form-label">Last Name</label>
+                        <input type="text" class="form-control" id="lastName" name="lastName" value="<%= patient.lastName %>" required>
                     </div>
                     <div class="mb-3">
-                        <label for="course" class="form-label">Course</label>
-                        <input type="text" class="form-control" id="course" name="course" value="<%= patient.course %>" required>
+                        <label for="dateOfBirth" class="form-label">Date of Birth</label>
+                        <input type="date" class="form-control" id="dateOfBirth" name="dateOfBirth" value="<%= patient.dateOfBirth.toISOString().split('T')[0] %>" required>
                     </div>
                     <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="text" class="form-control" id="email" name="email" value="<%= patient.email %>" required>
+                        <label for="medicalCondition" class="form-label">Medical Condition</label>
+                        <input type="text" class="form-control" id="medicalCondition" name="medicalCondition" value="<%= patient.medicalCondition %>" required>
                     </div>
                     <div class="mb-3">
-                        <label for="phone" class="form-label">Phone</label>
-                        <input type="text" class="form-control" id="phone" name="phone" value="<%= patient.phone %>" required>
+                        <label for="roomNumber" class="form-label">Room Number</label>
+                        <input type="text" class="form-control" id="roomNumber" name="roomNumber" value="<%= patient.roomNumber %>">
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"><%= patient.notes %></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary">Update</button>
                 </form>
