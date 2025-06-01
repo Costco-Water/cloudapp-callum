@@ -152,13 +152,58 @@ app.post("/patient", isAuthenticated, isAdmin, async (req, res) => {
     }
 });
 
-app.get("/patient/:id", isAuthenticated, async (req, res) => {
+app.put("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
         const patient = await Patient.findById(req.params.id);
         if (!patient) return res.status(404).send("Patient Not Found");
-        res.render("patient", { patient });
+
+        // Handle room change
+        if (patient.roomNumber !== req.body.roomNumber) {
+            // Remove from old room
+            if (patient.roomNumber) {
+                const oldRoom = await Room.findOne({ roomNumber: patient.roomNumber });
+                if (oldRoom) {
+                    oldRoom.currentPatients = oldRoom.currentPatients.filter(
+                        p => p.toString() !== patient._id.toString()
+                    );
+                    oldRoom.isOccupied = oldRoom.currentPatients.length > 0;
+                    await oldRoom.save();
+                }
+            }
+
+            // Add to new room if not discharge
+            if (req.body.roomNumber && req.body.roomNumber !== 'Discharge') {
+                const newRoom = await Room.findOne({ roomNumber: req.body.roomNumber });
+                if (newRoom) {
+                    if (!newRoom.currentPatients) {
+                        newRoom.currentPatients = [];
+                    }
+                    newRoom.currentPatients.push(patient._id);
+                    newRoom.isOccupied = true;
+                    await newRoom.save();
+                }
+            }
+        }
+
+        // Update patient details
+        const updatedPatient = await Patient.findByIdAndUpdate(
+            req.params.id,
+            {
+                firstName: req.body.firstName,
+                lastName: req.body.lastName,
+                dateOfBirth: req.body.dateOfBirth,
+                medicalCondition: req.body.medicalCondition,
+                roomNumber: req.body.roomNumber,
+                notes: req.body.notes,
+                discharged: req.body.roomNumber === 'Discharge'
+            },
+            { new: true }
+        );
+
+        res.redirect("/patients");
     } catch (error) {
-        res.status(500).send("Error fetching patient");
+        console.error("Patient update error:", error);
+        res.status(500).send("Error updating patient");
     }
 });
 
