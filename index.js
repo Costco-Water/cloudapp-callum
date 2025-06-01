@@ -7,6 +7,7 @@ const bcrypt = require("bcryptjs");
 const MongoStore = require("connect-mongo");
 const User = require("./models/Users.js");
 const Patient = require("./models/patient.js"); // Add this line
+const Room = require("./models/Room.js");
 const app = express();
 
 // Connect to MongoDB
@@ -189,6 +190,56 @@ app.delete("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
         res.redirect("/patients");
     } catch (error) {
         res.status(500).send("Error deleting patient");
+    }
+});
+
+app.get("/rooms", isAuthenticated, async (req, res) => {
+    try {
+        const rooms = await Room.find().populate('currentPatient');
+        res.render("rooms", { rooms });
+    } catch (error) {
+        res.status(500).send("Error fetching rooms");
+    }
+});
+
+app.get("/room/new", isAuthenticated, isAdmin, (req, res) => {
+    res.render("new_room");
+});
+
+app.post("/room", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const newRoom = new Room({
+            roomNumber: req.body.roomNumber,
+            type: req.body.type,
+            capacity: req.body.capacity,
+            notes: req.body.notes
+        });
+        await newRoom.save();
+        res.redirect("/rooms");
+    } catch (error) {
+        res.status(500).send("Error adding room");
+    }
+});
+
+app.post("/room/:id/assign", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const room = await Room.findById(req.params.id);
+        const patient = await Patient.findById(req.body.patientId);
+        
+        if (!room || !patient) {
+            return res.status(404).send("Room or Patient not found");
+        }
+
+        room.isOccupied = true;
+        room.currentPatient = patient._id;
+        await room.save();
+
+        patient.roomNumber = room.roomNumber;
+        await patient.save();
+
+        res.redirect("/rooms");
+    } catch (error) {
+        res.status(500).send("Error assigning room");
     }
 });
 
