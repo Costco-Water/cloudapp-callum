@@ -30,21 +30,26 @@
         <div class="card">
             <div class="card-body">
                 <form action="/patient" method="POST">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <div class="mb-3">
                         <label for="firstName" class="form-label">First Name</label>
-                        <input type="text" class="form-control" id="firstName" name="firstName" required>
+                        <input type="text" class="form-control" id="firstName" name="firstName" 
+                               required pattern="[A-Za-z\s-']+" title="Please enter a valid name">
                     </div>
                     <div class="mb-3">
                         <label for="lastName" class="form-label">Last Name</label>
-                        <input type="text" class="form-control" id="lastName" name="lastName" required>
+                        <input type="text" class="form-control" id="lastName" name="lastName" 
+                               required pattern="[A-Za-z\s-']+" title="Please enter a valid name">
                     </div>
                     <div class="mb-3">
                         <label for="dateOfBirth" class="form-label">Date of Birth</label>
-                        <input type="date" class="form-control" id="dateOfBirth" name="dateOfBirth" required>
+                        <input type="date" class="form-control" id="dateOfBirth" name="dateOfBirth" 
+                               required max="<%= new Date().toISOString().split('T')[0] %>">
                     </div>
                     <div class="mb-3">
                         <label for="medicalCondition" class="form-label">Medical Condition</label>
-                        <input type="text" class="form-control" id="medicalCondition" name="medicalCondition" required>
+                        <input type="text" class="form-control" id="medicalCondition" name="medicalCondition" 
+                               required maxlength="100">
                     </div>
                     <div class="mb-3">
                         <label for="roomNumber" class="form-label">Room Assignment</label>
@@ -59,7 +64,7 @@
                     </div>
                     <div class="mb-3">
                         <label for="notes" class="form-label">Notes</label>
-                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" maxlength="500"></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary">Add Patient</button>
                 </form>

@@ -32,6 +32,11 @@
             border-color: #1877f2;
             box-shadow: 0 0 0 0.2rem rgba(24, 119, 242, 0.25);
         }
+        .password-requirements {
+            font-size: 0.875rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
     </style>
 </head>
 <body>
@@ -41,13 +46,27 @@
         <div class="card">
             <div class="card-body">
                 <form method="POST" action="/register">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <div class="mb-3">
                         <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" placeholder="Choose a username" required />
+                        <input type="text" class="form-control" id="username" name="username" 
+                               placeholder="Choose a username" minlength="3" required />
+                        <div class="password-requirements">Username must be at least 3 characters</div>
                     </div>
                     <div class="mb-3">
                         <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" placeholder="Create a password" required />
+                        <input type="password" class="form-control" id="password" name="password" 
+                               placeholder="Create a password" 
+                               pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$" required />
+                        <div class="password-requirements">
+                            Password must contain:
+                            <ul class="mb-0">
+                                <li>At least 8 characters</li>
+                                <li>One uppercase letter</li>
+                                <li>One lowercase letter</li>
+                                <li>One number</li>
+                            </ul>
+                        </div>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">Register</button>
                 </form>
@@ -58,5 +77,6 @@
             <p>Already have an account? <a href="/login">Login here</a></p>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

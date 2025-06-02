@@ -8,36 +8,49 @@ const MongoStore = require("connect-mongo");
 const User = require("./models/Users.js");
 const Patient = require("./models/patient.js");
 const Room = require("./models/Room.js");
+const { body, validationResult } = require('express-validator');
+const rateLimit = require('express-rate-limit');
+const csrf = require('csurf');
 const app = express();
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const cookieParser = require('cookie-parser');
 
 // Connect to MongoDB
 mongoose.connect("mongodb://20.0.153.128:10999/callumDB")
     .then(() => console.log("MongoDB Connected"))
     .catch((err) => console.error("MongoDB Connection Error:", err));
 
+// Rate limiter setup
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5
+});
+
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(cookieParser());
 app.use(methodOverride("_method"));
 app.set("view engine", "ejs");
 
-// Update your session configuration
+
+// Update session configuration
 app.use(session({
     secret: "secretKey123",
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({ mongoUrl: "mongodb://20.0.153.128:10999/callumDB" }),
     cookie: {
-        secure: true,        // Requires HTTPS
-        httpOnly: true,      // Prevents client-side access
-        sameSite: 'strict',  // CSRF protection
-        maxAge: 3600000      // 1-hour session
+        secure: true,
+        httpOnly: true,
+        sameSite: 'strict',
+        maxAge: 3600000
     }
 }));
 
+// Security headers
 app.use((req, res, next) => {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -46,7 +59,15 @@ app.use((req, res, next) => {
     next();
 });
 
-// Middleware to make session data available in EJS
+app.use(csrf());
+
+// CSRF error handler
+app.use(function (err, req, res, next) {
+    if (err.code !== 'EBADCSRFTOKEN') return next(err);
+    res.status(403).send('Form has been tampered with');
+});
+
+// Session data middleware
 app.use(async (req, res, next) => {
     if (req.session.userId) {
         try {
@@ -65,8 +86,6 @@ app.use(async (req, res, next) => {
     next();
 });
 
-
-
 // Authentication middleware
 function isAuthenticated(req, res, next) {
     if (req.session.userId) return next();
@@ -84,12 +103,22 @@ function isAdmin(req, res, next) {
     }
 }
 
-// User routes
+// User routes with enhanced validation
 app.get("/register", (req, res) => {
-    res.render("register");
+    res.render("register", { csrfToken: req.csrfToken() });
 });
 
-app.post("/register", async (req, res) => {
+app.post("/register", [
+    body('username').trim().escape().isLength({ min: 3 }),
+    body('password')
+        .isLength({ min: 8 })
+        .matches(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).*$/)
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).send("Invalid input - username must be 3+ characters, password must meet requirements");
+    }
+
     const { username, password } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -103,10 +132,13 @@ app.post("/register", async (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-    res.render("login");
+    res.render("login", { csrfToken: req.csrfToken() });
 });
 
-app.post("/login", async (req, res) => {
+app.post("/login", loginLimiter, [
+    body('username').trim().escape(),
+    body('password').trim()
+], async (req, res) => {
     const { username, password } = req.body;
     const user = await User.findOne({ username });
 
@@ -125,7 +157,7 @@ app.get("/logout", isAuthenticated, (req, res) => {
     });
 });
 
-// Patient routes
+// Patient routes with sanitization
 app.get("/", isAuthenticated, (req, res) => {
     res.redirect("/patients");
 });
@@ -133,17 +165,22 @@ app.get("/", isAuthenticated, (req, res) => {
 app.get("/patients", isAuthenticated, async (req, res) => {
     try {
         const patients = await Patient.find();
-        res.render("patients", { patients });
+        res.render("patients", { patients, csrfToken: req.csrfToken() });
     } catch (error) {
         res.status(500).send("Error fetching patients");
     }
 });
 
 app.get("/patient/new", isAuthenticated, isAdmin, (req, res) => {
-    res.render("new_patient");
+    res.render("new_patient", { csrfToken: req.csrfToken() });
 });
 
-app.post("/patient", isAuthenticated, isAdmin, async (req, res) => {
+app.post("/patient", [
+    body('firstName').trim().escape(),
+    body('lastName').trim().escape(),
+    body('medicalCondition').trim().escape(),
+    body('notes').trim().escape()
+], isAuthenticated, isAdmin, async (req, res) => {
     try {
         const newPatient = new Patient({
             firstName: req.body.firstName,
@@ -155,7 +192,6 @@ app.post("/patient", isAuthenticated, isAdmin, async (req, res) => {
         });
         await newPatient.save();
 
-        // If room is assigned, update the room's currentPatients
         if (req.body.roomNumber && req.body.roomNumber !== 'Discharge') {
             const room = await Room.findOne({ roomNumber: req.body.roomNumber });
             if (room) {
@@ -172,14 +208,40 @@ app.post("/patient", isAuthenticated, isAdmin, async (req, res) => {
     }
 });
 
-app.put("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
+app.get("/patient/:id", isAuthenticated, async (req, res) => {
+    try {
+        const patient = await Patient.findById(req.params.id).populate('roomNumber');
+        if (!patient) {
+            return res.status(404).send("Patient Not Found");
+        }
+        res.render("patient", { patient, csrfToken: req.csrfToken() });
+    } catch (error) {
+        console.error("Error fetching patient:", error);
+        res.status(500).send("Error fetching patient details");
+    }
+});
+
+app.get("/patient/:id/edit", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const patient = await Patient.findById(req.params.id);
+        if (!patient) return res.status(404).send("Patient Not Found");
+        res.render("edit_patient", { patient, csrfToken: req.csrfToken() });
+    } catch (error) {
+        res.status(500).send("Error fetching patient");
+    }
+});
+
+app.put("/patient/:id", [
+    body('firstName').trim().escape(),
+    body('lastName').trim().escape(),
+    body('medicalCondition').trim().escape(),
+    body('notes').trim().escape()
+], isAuthenticated, isAdmin, async (req, res) => {
     try {
         const patient = await Patient.findById(req.params.id);
         if (!patient) return res.status(404).send("Patient Not Found");
 
-        // Handle room change
         if (patient.roomNumber !== req.body.roomNumber) {
-            // Remove from old room
             if (patient.roomNumber) {
                 const oldRoom = await Room.findOne({ roomNumber: patient.roomNumber });
                 if (oldRoom) {
@@ -191,7 +253,6 @@ app.put("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
                 }
             }
 
-            // Add to new room if not discharge
             if (req.body.roomNumber && req.body.roomNumber !== 'Discharge') {
                 const newRoom = await Room.findOne({ roomNumber: req.body.roomNumber });
                 if (newRoom) {
@@ -205,7 +266,6 @@ app.put("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
             }
         }
 
-        // Update patient details
         const updatedPatient = await Patient.findByIdAndUpdate(
             req.params.id,
             {
@@ -223,37 +283,6 @@ app.put("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
         res.redirect("/patients");
     } catch (error) {
         console.error("Patient update error:", error);
-        res.status(500).send("Error updating patient");
-    }
-});
-
-app.get("/patient/:id/edit", isAuthenticated, isAdmin, async (req, res) => {
-    try {
-        const patient = await Patient.findById(req.params.id);
-        if (!patient) return res.status(404).send("Patient Not Found");
-        res.render("edit_patient", { patient });
-    } catch (error) {
-        res.status(500).send("Error fetching patient");
-    }
-});
-
-app.put("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
-    try {
-        const patient = await Patient.findByIdAndUpdate(
-            req.params.id,
-            {
-                firstName: req.body.firstName,
-                lastName: req.body.lastName,
-                dateOfBirth: req.body.dateOfBirth,
-                medicalCondition: req.body.medicalCondition,
-                roomNumber: req.body.roomNumber,
-                notes: req.body.notes
-            },
-            { new: true }
-        );
-        if (!patient) return res.status(404).send("Patient Not Found");
-        res.redirect("/patients");
-    } catch (error) {
         res.status(500).send("Error updating patient");
     }
 });
@@ -307,12 +336,20 @@ app.delete("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
     }
 });
 
-// Room routes
+// Room routes with sanitization
 app.get("/rooms", isAuthenticated, async (req, res) => {
     try {
         const rooms = await Room.find().populate('currentPatients');
-        const patients = await Patient.find();
-        res.render("rooms", { rooms, patients });
+        // Get ALL non-discharged patients
+        const patients = await Patient.find({
+            discharged: false
+        });
+        
+        res.render("rooms", { 
+            rooms, 
+            patients, 
+            csrfToken: req.csrfToken() 
+        });
     } catch (error) {
         console.error("Room fetch error:", error);
         res.status(500).send("Error fetching rooms");
@@ -320,10 +357,14 @@ app.get("/rooms", isAuthenticated, async (req, res) => {
 });
 
 app.get("/room/new", isAuthenticated, isAdmin, (req, res) => {
-    res.render("new_room");
+    res.render("new_room", { csrfToken: req.csrfToken() });
 });
 
-app.post("/room", isAuthenticated, isAdmin, async (req, res) => {
+app.post("/room", [
+    body('roomNumber').trim().escape(),
+    body('type').trim().escape(),
+    body('notes').trim().escape()
+], isAuthenticated, isAdmin, async (req, res) => {
     try {
         const newRoom = new Room({
             roomNumber: req.body.roomNumber,
@@ -343,14 +384,16 @@ app.get("/room/:id/edit", isAuthenticated, isAdmin, async (req, res) => {
     try {
         const room = await Room.findById(req.params.id).populate('currentPatients');
         if (!room) return res.status(404).send("Room Not Found");
-        res.render("edit_room", { room });
+        res.render("edit_room", { room, csrfToken: req.csrfToken() });
     } catch (error) {
         console.error("Room edit fetch error:", error);
         res.status(500).send("Error fetching room");
     }
 });
 
-app.put("/room/:id", isAuthenticated, isAdmin, async (req, res) => {
+app.put("/room/:id", [
+    body('notes').trim().escape()
+], isAuthenticated, isAdmin, async (req, res) => {
     try {
         const room = await Room.findByIdAndUpdate(
             req.params.id,
@@ -378,7 +421,7 @@ app.post("/room/:id/assign", isAuthenticated, isAdmin, async (req, res) => {
             return res.status(404).send("Room or Patient not found");
         }
 
-        // Remove patient from their current room if they're assigned to one
+        // Remove patient from current room if assigned
         if (patient.roomNumber) {
             const oldRoom = await Room.findOne({ roomNumber: patient.roomNumber });
             if (oldRoom) {
@@ -395,15 +438,13 @@ app.post("/room/:id/assign", isAuthenticated, isAdmin, async (req, res) => {
             room.currentPatients = [];
         }
 
-        if (room.currentPatients.length >= room.capacity) {
-            return res.status(400).send("Room is at full capacity");
-        }
-
         room.currentPatients.push(patient._id);
         room.isOccupied = true;
         await room.save();
 
+        // Update patient's room number
         patient.roomNumber = room.roomNumber;
+        patient.discharged = false; // Ensure patient is marked as not discharged
         await patient.save();
 
         res.redirect("/rooms");
@@ -418,7 +459,6 @@ app.delete("/room/:id", isAuthenticated, isAdmin, async (req, res) => {
         const room = await Room.findById(req.params.id);
         if (!room) return res.status(404).send("Room Not Found");
         
-        // Update any patients assigned to this room
         await Patient.updateMany(
             { roomNumber: room.roomNumber },
             { $set: { roomNumber: null } }
@@ -442,7 +482,6 @@ app.post("/patient/:id/reassign", isAuthenticated, isAdmin, async (req, res) => 
             return res.status(404).send("Patient or Room not found");
         }
 
-        // Remove from discharge room if they're there
         if (dischargeRoom) {
             dischargeRoom.currentPatients = dischargeRoom.currentPatients.filter(
                 p => p.toString() !== patient._id.toString()
@@ -450,13 +489,11 @@ app.post("/patient/:id/reassign", isAuthenticated, isAdmin, async (req, res) => 
             await dischargeRoom.save();
         }
 
-        // Update patient status
         patient.discharged = false;
         patient.dischargeDate = null;
         patient.roomNumber = newRoom.roomNumber;
         await patient.save();
 
-        // Add to new room
         if (!newRoom.currentPatients.includes(patient._id)) {
             newRoom.currentPatients.push(patient._id);
             newRoom.isOccupied = true;
@@ -470,23 +507,7 @@ app.post("/patient/:id/reassign", isAuthenticated, isAdmin, async (req, res) => 
     }
 });
 
-// Add this with your other patient routes
-app.get("/patient/:id", isAuthenticated, async (req, res) => {
-    try {
-        const patient = await Patient.findById(req.params.id).populate('roomNumber');
-        if (!patient) {
-            return res.status(404).send("Patient Not Found");
-        }
-        res.render("patient", { patient });
-    } catch (error) {
-        console.error("Error fetching patient:", error);
-        res.status(500).send("Error fetching patient details");
-    }
-});
-
-
-// Replace the try/catch block at the bottom with:
-
+// SSL Server setup
 try {
     const sslOptions = {
         key: fs.readFileSync(path.join(__dirname, 'ssl', 'private.key')),
