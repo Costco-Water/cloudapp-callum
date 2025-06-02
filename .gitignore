@@ -1,0 +1,23 @@
+# SSL Certificates
+ssl/
+*.pem
+*.key
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment variables
+.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+
+# MongoDB
+data/

@@ -9,6 +9,9 @@ const User = require("./models/Users.js");
 const Patient = require("./models/patient.js");
 const Room = require("./models/Room.js");
 const app = express();
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
 // Connect to MongoDB
 mongoose.connect("mongodb://20.0.153.128:10999/callumDB")
@@ -21,12 +24,27 @@ app.use(express.json());
 app.use(methodOverride("_method"));
 app.set("view engine", "ejs");
 
+// Update your session configuration
 app.use(session({
     secret: "secretKey123",
     resave: false,
     saveUninitialized: false,
-    store: MongoStore.create({ mongoUrl: "mongodb://20.0.153.128:10999/callumDB" })
+    store: MongoStore.create({ mongoUrl: "mongodb://20.0.153.128:10999/callumDB" }),
+    cookie: {
+        secure: true,        // Requires HTTPS
+        httpOnly: true,      // Prevents client-side access
+        sameSite: 'strict',  // CSRF protection
+        maxAge: 3600000      // 1-hour session
+    }
 }));
+
+app.use((req, res, next) => {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    next();
+});
 
 // Middleware to make session data available in EJS
 app.use(async (req, res, next) => {
@@ -46,6 +64,8 @@ app.use(async (req, res, next) => {
     }
     next();
 });
+
+
 
 // Authentication middleware
 function isAuthenticated(req, res, next) {
@@ -464,5 +484,19 @@ app.get("/patient/:id", isAuthenticated, async (req, res) => {
     }
 });
 
-// Start server
-app.listen(8080, () => console.log("Server is running on port 8080"));
+
+// Replace the try/catch block at the bottom with:
+
+try {
+    const sslOptions = {
+        key: fs.readFileSync(path.join(__dirname, 'ssl', 'private.key')),
+        cert: fs.readFileSync(path.join(__dirname, 'ssl', 'certificate.pem'))
+    };
+    
+    https.createServer(sslOptions, app).listen(8443, () => {
+        console.log("HTTPS server running securely on port 8443");
+    });
+} catch (error) {
+    console.error("SSL Error:", error);
+    process.exit(1);
+}
