@@ -1,9 +1,18 @@
 const mongoose = require("mongoose");
 
 const patientSchema = new mongoose.Schema({
-    firstName: String,
-    lastName: String,
-    dateOfBirth: Date,
+    firstName: {
+        type: String,
+        required: true
+    },
+    lastName: {
+        type: String,
+        required: true
+    },
+    dateOfBirth: {
+        type: Date,
+        required: true
+    },
     medicalCondition: String,
     roomNumber: {
         type: String,
@@ -15,7 +24,11 @@ const patientSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    dischargeDate: Date
+    dischargeDate: Date,
+    admissionDate: {
+        type: Date,
+        default: Date.now
+    }
 });
 
 module.exports = mongoose.model("Patient", patientSchema);

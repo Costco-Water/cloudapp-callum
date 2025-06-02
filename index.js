@@ -450,5 +450,19 @@ app.post("/patient/:id/reassign", isAuthenticated, isAdmin, async (req, res) => 
     }
 });
 
+// Add this with your other patient routes
+app.get("/patient/:id", isAuthenticated, async (req, res) => {
+    try {
+        const patient = await Patient.findById(req.params.id).populate('roomNumber');
+        if (!patient) {
+            return res.status(404).send("Patient Not Found");
+        }
+        res.render("patient", { patient });
+    } catch (error) {
+        console.error("Error fetching patient:", error);
+        res.status(500).send("Error fetching patient details");
+    }
+});
+
 // Start server
 app.listen(8080, () => console.log("Server is running on port 8080"));
