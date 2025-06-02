@@ -10,43 +10,84 @@
         .card { 
             border: none; 
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
-            margin-bottom: 1rem; 
+            margin-bottom: 1rem;
+            min-height: 400px;
+            background-color: #ffffff;
         }
-        .btn-primary { background-color: #1877f2; border-color: #1877f2; }
-        .btn-primary:hover { background-color: #166fe5; border-color: #166fe5; }
-        .occupied { background-color: #e9ecef; }
+        .card.occupied { 
+            background-color: #e9ecef; 
+        }
+        .room-card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .card-body {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 1.5rem;
+        }
+        .room-info {
+            margin-bottom: 1.5rem;
+        }
+        .btn-primary { 
+            background-color: #1877f2; 
+            border-color: #1877f2; 
+        }
+        .btn-primary:hover { 
+            background-color: #166fe5; 
+            border-color: #166fe5; 
+        }
+        .btn-secondary { 
+            background-color: #e4e6eb; 
+            border-color: #e4e6eb; 
+            color: #050505; 
+        }
+        .btn-secondary:hover { 
+            background-color: #d8dade; 
+            border-color: #d8dade; 
+        }
         .patient-list { 
-            margin-top: 1rem; 
-            padding-top: 1rem; 
-            border-top: 1px solid #dee2e6; 
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid #dee2e6;
         }
-        .btn-group .btn { margin-right: 0.25rem; }
+        .assign-form {
+            margin-top: 1rem;
+        }
+        .btn-group .btn { 
+            margin-right: 0.25rem; 
+        }
     </style>
 </head>
 <body>
     <%- include('partials/navbar') %>
 
     <div class="container mt-5">
-        <h1 class="mb-4">Room List</h1>
-        
-        <% if (session.role === 'admin') { %>
-            <a href="/room/new" class="btn btn-primary mb-3">Add New Room</a>
-        <% } %>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Room List</h1>
+            <% if (session.role === 'admin') { %>
+                <a href="/room/new" class="btn btn-primary">Add New Room</a>
+            <% } %>
+        </div>
 
-        <div class="row">
+        <div class="row g-4">
             <% rooms.forEach(room => { %>
-                <div class="col-md-4 mb-3">
+                <div class="col-md-4">
                     <div class="card <%= room.isOccupied ? 'occupied' : '' %>">
-                        <div class="card-body">
-                            <h5 class="card-title">Room <%= room.roomNumber %></h5>
-                            <p class="card-text">
-                                <strong>Type:</strong> <%= room.type %><br>
-                                <strong>Capacity:</strong> <%= room.capacity %><br>
-                                <strong>Status:</strong> <%= room.isOccupied ? 'Occupied' : 'Available' %><br>
-                                <% if (room.notes) { %>
-                                    <strong>Notes:</strong> <%= room.notes %><br>
-                                <% } %>
-                            </p>
+                        <div class="card-body room-card">
+                            <div class="room-info">
+                                <h5 class="card-title">Room <%= room.roomNumber %></h5>
+                                <p class="card-text">
+                                    <strong>Type:</strong> <%= room.type %><br>
+                                    <strong>Capacity:</strong> <%= room.capacity %><br>
+                                    <strong>Status:</strong> <%= room.isOccupied ? 'Occupied' : 'Available' %><br>
+                                    <% if (room.notes) { %>
+                                        <strong>Notes:</strong> <%= room.notes %><br>
+                                    <% } %>
+                                </p>
+                            </div>
 
                             <div class="btn-group">
                                 <% if (session.role === 'admin') { %>
@@ -59,29 +100,6 @@
                                 <% } %>
                             </div>
 
-                            <% if (session.role === 'admin' && room.roomNumber !== 'Discharge' && 
-                                (!room.currentPatients || room.currentPatients.length < room.capacity)) { %>
-                                <div class="patient-list">
-                                    <form action="/room/<%= room._id %>/assign" method="POST">
-                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                                        <div class="input-group">
-                                            <select class="form-select" name="patientId" required>
-                                                <option value="">Assign Patient...</option>
-                                                <% patients.forEach(patient => { %>
-                                                    <% if (!patient.discharged) { %>
-                                                        <option value="<%= patient._id %>">
-                                                            <%= patient.firstName %> <%= patient.lastName %>
-                                                            <%= patient.roomNumber ? `(Current: Room ${patient.roomNumber})` : '(Unassigned)' %>
-                                                        </option>
-                                                    <% } %>
-                                                <% }); %>
-                                            </select>
-                                            <button type="submit" class="btn btn-success">Assign</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            <% } %>
-
                             <% if (room.currentPatients && room.currentPatients.length > 0) { %>
                                 <div class="patient-list">
                                     <h6>Current Patients:</h6>
@@ -92,6 +110,29 @@
                                             </li>
                                         <% }); %>
                                     </ul>
+                                </div>
+                            <% } %>
+
+                            <% if (session.role === 'admin' && room.roomNumber !== 'Discharge' && 
+                                (!room.currentPatients || room.currentPatients.length < room.capacity)) { %>
+                                <div class="assign-form">
+                                    <form action="/room/<%= room._id %>/assign" method="POST">
+                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                        <div class="input-group">
+                                            <select class="form-select" name="patientId" required>
+                                                <option value="">Assign Patient...</option>
+                                                <% patients.forEach(patient => { %>
+                                                    <% if (!patient.discharged) { %>
+                                                        <option value="<%= patient._id %>">
+                                                            <%= patient.firstName %> <%= patient.lastName %>
+                                                            <%= patient.roomNumber ? `(Room ${patient.roomNumber})` : '(Unassigned)' %>
+                                                        </option>
+                                                    <% } %>
+                                                <% }); %>
+                                            </select>
+                                            <button type="submit" class="btn btn-success">Assign</button>
+                                        </div>
+                                    </form>
                                 </div>
                             <% } %>
                         </div>
