@@ -51,7 +51,6 @@ roomSchema.statics.setupDefaultRooms = async function() {
 
 const Room = mongoose.model("Room", roomSchema);
 
-// Setup default rooms with error handling
 Room.setupDefaultRooms().catch(console.error);
 
 module.exports = Room;

@@ -1,13 +1,13 @@
 const mongoose = require("mongoose");
-const Room = require("./models/Room"); // Fix the path to be relative
+const Room = require("./models/Room"); 
 
 mongoose.connect("mongodb://20.0.153.128:10999/callumDB")
     .then(async () => {
         try {
-            // Clear existing rooms
+            
             await Room.deleteMany({});
 
-            // Create fixed rooms
+            
             const rooms = [
                 { roomNumber: '1', type: 'General', capacity: 4 },
                 { roomNumber: '2', type: 'Emergency', capacity: 4 },

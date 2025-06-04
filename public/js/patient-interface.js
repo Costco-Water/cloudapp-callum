@@ -1,6 +1,4 @@
-/* Add JS$  content */
 document.addEventListener('DOMContentLoaded', () => {
-    // Add search and filter section to the page
     const containerDiv = document.querySelector('.container');
     const titleDiv = containerDiv.querySelector('.d-flex');
     
@@ -27,7 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     titleDiv.insertAdjacentElement('afterend', searchSection);
 
-    // Add filtering functionality
     const searchInput = document.getElementById('searchPatients');
     const statusFilter = document.getElementById('statusFilter');
     const patientCards = document.querySelectorAll('.col-md-4');
@@ -50,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Add event listeners with debounce for search
+    
     let searchTimeout;
     searchInput.addEventListener('input', () => {
         clearTimeout(searchTimeout);
@@ -59,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     statusFilter.addEventListener('change', filterPatients);
 
-    // Add hover effects for cards
+    
     patientCards.forEach(card => {
         card.addEventListener('mouseenter', () => {
             card.querySelector('.card').style.transform = 'translateY(-2px)';

@@ -1,4 +1,4 @@
-/* Common styles */
+
 body { 
     background-color: #f0f2f5; 
 }
@@ -78,7 +78,7 @@ body {
     margin-right: 0.25rem; 
 }
 
-/* Mobile responsiveness */
+
 @media (max-width: 768px) {
     .card {
         min-height: auto;

@@ -17,18 +17,18 @@ const fs = require('fs');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 
-// Connect to MongoDB
+
 mongoose.connect("mongodb://20.0.153.128:10999/callumDB")
     .then(() => console.log("MongoDB Connected"))
     .catch((err) => console.error("MongoDB Connection Error:", err));
 
-// Rate limiter setup
+
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 5
 });
 
-// Middleware
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
@@ -37,7 +37,7 @@ app.set("view engine", "ejs");
 app.use(express.static('public'));
 
 
-// Update session configuration
+
 app.use(session({
     secret: "secretKey123",
     resave: false,
@@ -51,7 +51,7 @@ app.use(session({
     }
 }));
 
-// Security headers
+
 app.use((req, res, next) => {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -62,13 +62,13 @@ app.use((req, res, next) => {
 
 app.use(csrf());
 
-// CSRF error handler
+
 app.use(function (err, req, res, next) {
     if (err.code !== 'EBADCSRFTOKEN') return next(err);
     res.status(403).send('Form has been tampered with');
 });
 
-// Session data middleware
+
 app.use(async (req, res, next) => {
     if (req.session.userId) {
         try {
@@ -87,7 +87,7 @@ app.use(async (req, res, next) => {
     next();
 });
 
-// Authentication middleware
+
 function isAuthenticated(req, res, next) {
     if (req.session.userId) return next();
     res.redirect("/login");
@@ -104,7 +104,7 @@ function isAdmin(req, res, next) {
     }
 }
 
-// User routes with enhanced validation
+
 app.get("/register", (req, res) => {
     res.render("register", { csrfToken: req.csrfToken() });
 });
@@ -158,7 +158,7 @@ app.get("/logout", isAuthenticated, (req, res) => {
     });
 });
 
-// Patient routes with sanitization
+
 app.get("/", isAuthenticated, (req, res) => {
     res.redirect("/patients");
 });
@@ -293,7 +293,7 @@ app.post("/patient/:id/discharge", isAuthenticated, isAdmin, async (req, res) =>
         const patient = await Patient.findById(req.params.id);
         if (!patient) return res.status(404).send("Patient Not Found");
 
-        // Remove from current room if assigned
+        
         if (patient.roomNumber && patient.roomNumber !== 'Discharge') {
             const currentRoom = await Room.findOne({ roomNumber: patient.roomNumber });
             if (currentRoom) {
@@ -303,7 +303,7 @@ app.post("/patient/:id/discharge", isAuthenticated, isAdmin, async (req, res) =>
             }
         }
 
-        // Add to discharge room
+        
         const dischargeRoom = await Room.findOne({ roomNumber: 'Discharge' });
         if (dischargeRoom) {
             if (!dischargeRoom.currentPatients) {
@@ -314,7 +314,7 @@ app.post("/patient/:id/discharge", isAuthenticated, isAdmin, async (req, res) =>
             await dischargeRoom.save();
         }
 
-        // Update patient
+        
         patient.discharged = true;
         patient.dischargeDate = new Date();
         patient.roomNumber = 'Discharge';
@@ -337,11 +337,11 @@ app.delete("/patient/:id", isAuthenticated, isAdmin, async (req, res) => {
     }
 });
 
-// Room routes with sanitization
+
 app.get("/rooms", isAuthenticated, async (req, res) => {
     try {
         const rooms = await Room.find().populate('currentPatients');
-        // Get ALL non-discharged patients
+        
         const patients = await Patient.find({
             discharged: false
         });
@@ -422,7 +422,7 @@ app.post("/room/:id/assign", isAuthenticated, isAdmin, async (req, res) => {
             return res.status(404).send("Room or Patient not found");
         }
 
-        // Remove patient from current room if assigned
+        
         if (patient.roomNumber) {
             const oldRoom = await Room.findOne({ roomNumber: patient.roomNumber });
             if (oldRoom) {
@@ -434,7 +434,7 @@ app.post("/room/:id/assign", isAuthenticated, isAdmin, async (req, res) => {
             }
         }
 
-        // Add patient to new room
+        
         if (!room.currentPatients) {
             room.currentPatients = [];
         }
@@ -443,9 +443,9 @@ app.post("/room/:id/assign", isAuthenticated, isAdmin, async (req, res) => {
         room.isOccupied = true;
         await room.save();
 
-        // Update patient's room number
+        
         patient.roomNumber = room.roomNumber;
-        patient.discharged = false; // Ensure patient is marked as not discharged
+        patient.discharged = false; 
         await patient.save();
 
         res.redirect("/rooms");
@@ -508,7 +508,7 @@ app.post("/patient/:id/reassign", isAuthenticated, isAdmin, async (req, res) => 
     }
 });
 
-// SSL Server setup
+
 try {
     const sslOptions = {
         key: fs.readFileSync(path.join(__dirname, 'ssl', 'private.key')),
