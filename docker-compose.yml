@@ -1,0 +1,20 @@
+services:
+  cloudapp:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: costco-water/cloudapp/callum
+    ports:
+      - "10555:8443"
+    volumes:
+      - ./ssl:/app/ssl
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://20.0.153.128:10999/callumDB
+    restart: unless-stopped
+    networks:
+      - cloudapp-network
+
+networks:
+  cloudapp-network:
+    driver: bridge
